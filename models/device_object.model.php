@@ -206,12 +206,8 @@ class DeviceObjectModel
     }
     public function validateDriver()
     {
-        $db = new db_mssql();
-        $sql = "select * from cfg_driver where job_number='$this->driver' ";
-        $name = $db->query($sql);
-
-        if ($name == 0) {
-            PrintJSON("", " driver ID: " . $this->driver . " is not available!", 0);
+        if ($this->driver == "") {
+            PrintJSON("", " driver is empty!", 0);
             die();
         }
     }

@@ -40,8 +40,8 @@ class DriverModel
     }
     function checkId()
     {
-        if (!is_numeric($this->jno) || strlen($this->jno) < 3) {
-            PrintJSON("", "ID must be greater than 3 digits and number only", 0);
+        if (strlen($this->jno) < 3) {
+            PrintJSON("", "ID must be greater than 3 digits", 0);
             die();
         }
     }
@@ -97,8 +97,8 @@ class DriverModel
     }
     function validateIp()
     {
-        if (!is_numeric($this->ip)) {
-            PrintJSON("", "Ip is number only", 0);
+        if ($this->ip == "") {
+            PrintJSON("", "Ip is empty", 0);
             die();
         }
     }

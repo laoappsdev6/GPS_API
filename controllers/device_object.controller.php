@@ -412,12 +412,13 @@ class DeviceObjectController
             $time_zone = (float) $_SESSION['timezone'];
 
             if ($cat->page == "" && $cat->limit == "") {
-                $sql = "select o.object_id objid, o.object_flag oflag, o.driver_job_number driver,dv.driver_name, d.dtype_id dtype,dt.dtype_name, d.device_state dstate, o.group_id ginfo,g.group_name,d.device_no devno,d.device_sim p,
+                $sql = "select o.object_id objid, o.object_flag oflag, o.driver_job_number driver, d.dtype_id dtype,dt.dtype_name, d.device_state dstate, o.group_id ginfo,g.group_name,d.device_no devno,d.device_sim p,
                     d.device_pass dpass,d.install_addr iaddr,o.customer_id cinfo,o.object_kind okind,o.userdef_flag uflag,o.remark,
                     dbo.fn_sec2time(60 * isnull(o.time_zone, datediff(minute, getutcdate(), getdate())), '-hm') ztime,
-                    convert(varchar(20), dbo.fn_to_client_time(d.install_time, $time_zone*60), 20) stamp, convert(varchar(20), dbo.fn_to_client_time(d.last_stamp, $time_zone*60), 20) estamp
-                from cfg_user_purview p,cfg_device d, cfg_object o, cfg_group g,sys_device_type  dt,cfg_driver dv
-                where p.user_id = $user_id and p.purview_id = 1000 and d.object_id = o.object_id and o.group_id = g.group_id and d.dtype_id=dt.dtype_id and o.driver_job_number=dv.job_number
+                    convert(varchar(20), dbo.fn_to_client_time(d.install_time, $time_zone*60), 20) stamp, convert(varchar(20), dbo.fn_to_client_time(d.last_stamp, $time_zone*60), 20) estamp,
+                    (select driver_name from cfg_driver as dv where o.driver_job_number = dv.job_number) as driver_name
+                from cfg_user_purview p,cfg_device d, cfg_object o, cfg_group g,sys_device_type  dt
+                where p.user_id = $user_id and p.purview_id = 1000 and d.object_id = o.object_id and o.group_id = g.group_id and d.dtype_id=dt.dtype_id
                     and o.group_id in (select * from dbo.fn_group4user($user_id))  order by o.object_id desc ";
                 $doquery = $db->query($sql);
                 $list = json_encode($doquery);
@@ -426,12 +427,13 @@ class DeviceObjectController
             } else {
                 $offset = (($cat->page - 1) * $cat->limit);
 
-                $sql = "select o.object_id objid, o.object_flag oflag, o.driver_job_number driver,dv.driver_name, d.dtype_id dtype,dt.dtype_name, d.device_state dstate,d.online, o.group_id ginfo,g.group_name,d.device_no devno,d.device_sim p,
-                d.device_pass dpass,d.install_addr iaddr,o.customer_id cinfo, ctm.short_name,ctm.full_name,o.object_kind okind,o.userdef_flag uflag,o.remark,
+                $sql = "select o.object_id objid, o.object_flag oflag, o.driver_job_number driver, d.dtype_id dtype,dt.dtype_name, d.device_state dstate,d.online, o.group_id ginfo,g.group_name,d.device_no devno,d.device_sim p,
+                d.device_pass dpass,d.install_addr iaddr,o.customer_id cinfo,o.object_kind okind,o.userdef_flag uflag,o.remark,
                 dbo.fn_sec2time(60 * isnull(o.time_zone, datediff(minute, getutcdate(), getdate())), '-hm') ztime,
-                convert(varchar(20), dbo.fn_to_client_time(d.install_time, $time_zone*60), 20) stamp, convert(varchar(20), dbo.fn_to_client_time(d.last_stamp, $time_zone*60), 20) estamp
-            from cfg_user_purview p,cfg_device d, cfg_object o, cfg_group g,sys_device_type  dt,cfg_driver dv, cfg_customer ctm
-            where p.user_id = $user_id and p.purview_id = 1000 and d.object_id = o.object_id and o.group_id = g.group_id and d.dtype_id=dt.dtype_id and o.driver_job_number=dv.job_number and o.customer_id = ctm.customer_id
+                convert(varchar(20), dbo.fn_to_client_time(d.install_time, $time_zone*60), 20) stamp, convert(varchar(20), dbo.fn_to_client_time(d.last_stamp, $time_zone*60), 20) estamp,
+                (select driver_name from cfg_driver as dv where o.driver_job_number = dv.job_number) as driver_name
+                from cfg_user_purview p,cfg_device d, cfg_object o, cfg_group g,sys_device_type  dt
+            where p.user_id = $user_id and p.purview_id = 1000 and d.object_id = o.object_id and o.group_id = g.group_id and d.dtype_id=dt.dtype_id
                 and o.group_id in (select * from dbo.fn_group4user($user_id)) ";
                 if (isset($cat->keyword) && $cat->keyword != "") {
                     $sql .= "and (
@@ -440,9 +442,7 @@ class DeviceObjectController
                                      d.device_sim like '%$cat->keyword%' or
                                      g.group_name like '%$cat->keyword%' or
                                      dt.dtype_name like '%$cat->keyword%' or
-                                     ctm.short_name like '%$cat->keyword%' or
-                                     ctm.full_name like '%$cat->keyword%' or
-                                     dv.driver_name like '%$cat->keyword%' ) ";
+                                     o.object_id like '%$cat->keyword%'  ) ";
                 }
                 $sql_page = "order by o.object_id desc offset $offset rows fetch next $cat->limit rows only  ";
                 // echo $sql;die();
@@ -481,12 +481,12 @@ class DeviceObjectController
             $user_id = $_SESSION['uid'];
             $time_zone = (float) $_SESSION['timezone'];
 
-            $sql = "select o.object_id objid, o.object_flag oflag, o.driver_job_number driver,dv.driver_name, d.dtype_id dtype,dt.dtype_name, d.device_state dstate, o.group_id ginfo,g.group_name,d.device_no devno,d.device_sim p,
+            $sql = "select o.object_id objid, o.object_flag oflag, o.driver_job_number driver, d.dtype_id dtype,dt.dtype_name, d.device_state dstate, o.group_id ginfo,g.group_name,d.device_no devno,d.device_sim p,
                     d.device_pass dpass,d.install_addr iaddr,o.customer_id cinfo,o.object_kind okind,o.userdef_flag uflag,o.remark,
                     dbo.fn_sec2time(60 * isnull(o.time_zone, datediff(minute, getutcdate(), getdate())), '-hm') ztime,
                     convert(varchar(20), dbo.fn_to_client_time(d.install_time, $time_zone*60), 20) stamp, convert(varchar(20), dbo.fn_to_client_time(d.last_stamp, $time_zone*60), 20) estamp
-                from cfg_user_purview p,cfg_device d, cfg_object o, cfg_group g,sys_device_type  dt,cfg_driver dv
-                where p.user_id = $user_id and p.purview_id = 1000 and d.object_id = o.object_id and o.group_id = g.group_id and d.dtype_id=dt.dtype_id and o.driver_job_number=dv.job_number
+                from cfg_user_purview p,cfg_device d, cfg_object o, cfg_group g,sys_device_type  dt
+                where p.user_id = $user_id and p.purview_id = 1000 and d.object_id = o.object_id and o.group_id = g.group_id and d.dtype_id=dt.dtype_id
                     and o.group_id in (select * from dbo.fn_group4user($user_id)) and d.device_no ='$cat->device_no' ";
             $doquery = $db->query($sql);
             if ($doquery > 0) {
@@ -544,7 +544,7 @@ class DeviceObjectController
                         set @code = -1
                             update cfg_device set device_sim = '$device_sim-$object_id', last_stamp ='$now_date' where object_id ='$object_id'
                         set @code = -2
-                            update cfg_object set object_flag ='$object_flag-$object_id', remark=N'$gps->remark' where object_id ='$object_id'
+                            update cfg_object set object_flag =N'$object_flag-$object_id', remark=N'$gps->remark' where object_id ='$object_id'
 
                         declare @purview    int
                         exec @purview = dbo.p_user_have_purview $user_id, 1090, 'A'
