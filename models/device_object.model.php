@@ -206,7 +206,7 @@ class DeviceObjectModel
     }
     public function validateDriver()
     {
-        if ($this->driver == "") {
+        if (empty($this->driver) || $this->driver ==" ") {
             PrintJSON("", " driver is empty!", 0);
             die();
         }
